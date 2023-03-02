@@ -1,0 +1,79 @@
+login as: root
+root@localhost's password:
+Last login: Wed Feb 22 11:34:09 2023 from 172.18.0.3
+[root@sandbox-hdp ~]# ls -ltr
+total 44
+-rw------- 1 root root 3270 Apr  2  2018 anaconda-ks.cfg
+-rw-r--r-- 1 root root   51 Feb 22 07:49 riyaz.csv
+-rw-r--r-- 1 root root  115 Feb 22 08:25 users.txt
+-rw-r--r-- 1 root root   55 Feb 22 08:45 locations.txt
+-rw-r--r-- 1 root root  164 Feb 22 09:49 json_file.json
+-rw-r--r-- 1 root root   52 Feb 22 10:07 csv_file.csv
+-rw-r--r-- 1 root root   17 Feb 22 10:32 emp_details_riyaz.txt
+-rw-r--r-- 1 root root   17 Feb 22 10:51 emp_details.txt
+-rw-r--r-- 1 root root  170 Feb 22 11:22 emp_details
+-rw-r--r-- 1 root root  114 Feb 22 11:23 complex_data_type.txt
+-rw-r--r-- 1 root root  108 Feb 22 11:34 employee.csv
+[root@sandbox-hdp ~]# cd /usr/hdp/current/kafka-broker
+[root@sandbox-hdp kafka-broker]# pwd
+/usr/hdp/current/kafka-broker
+[root@sandbox-hdp kafka-broker]# ls
+bin  conf  config  doc  examples  libs  LICENSE  logs  NOTICE  pids
+[root@sandbox-hdp kafka-broker]# bin/kafka-topics.sh --list --zookeeper localhost:2181
+
+ATLAS_ENTITIES
+ATLAS_HOOK
+__consumer_offsets
+[root@sandbox-hdp kafka-broker]#
+[root@sandbox-hdp kafka-broker]# bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 2 --topic Riyaztopic
+Created topic "Riyaztopic".
+[root@sandbox-hdp kafka-broker]# bin/kafka-topics.sh --list --zookeeper localhost:2181
+ATLAS_ENTITIES
+ATLAS_HOOK
+Riyaztopic
+__consumer_offsets
+[root@sandbox-hdp kafka-broker]# bin/kafka-console-producer.sh --broker-list 172.18.0.2:6667 --topic Riyaztopic
+>1,Riyaz,100
+>2,Ayesha,200
+>3,Kabeer,300
+>4,Sazid,400
+>5,Farooq,500
+>{Riyaz:"Big Data"}
+
+
+OPEN THE ANOTHER SESSION AND RUN THIS COMMAND SO THAT THE DATA GETS UPDATED IN REAL-TIME
+
+login as: root
+root@localhost's password:
+Last login: Wed Feb 22 11:51:58 2023 from 172.18.0.3
+[root@sandbox-hdp ~]# cd /usr/hdp/current/kafka-broker
+[root@sandbox-hdp kafka-broker]# pwd
+/usr/hdp/current/kafka-broker
+[root@sandbox-hdp kafka-broker]# bin/kafka-console-consumer.sh --bootstrap-server 172.18.0.2:6667 --topic Riyaztopic --from-beginning
+1,Riyaz,100
+2,Ayesha,200
+3,Kabeer,300
+4,Sazid,400
+5,Farooq,500
+{Riyaz:"Big Data"}
+
+
+
+TO SEE THE IP ADDRESS WE NEED TO RUN THIS COMMAND
+
+[root@sandbox-hdp ~]# ifconfig
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 172.18.0.2  netmask 255.255.0.0  broadcast 172.18.255.255
+        ether 02:42:ac:12:00:02  txqueuelen 0  (Ethernet)
+        RX packets 46381  bytes 186879721 (178.2 MiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 39870  bytes 4996746 (4.7 MiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        loop  txqueuelen 1000  (Local Loopback)
+        RX packets 1185202  bytes 714866970 (681.7 MiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 1185202  bytes 714866970 (681.7 MiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0

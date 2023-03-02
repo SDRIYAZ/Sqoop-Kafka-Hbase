@@ -1,0 +1,346 @@
+***  check connection
+
+[root@sandbox-hdp ~]#
+sqoop import --connect jdbc:mysql://localhost:3306 --username root --password hortonworks1
+
+
+***    list databases
+
+[root@sandbox-hdp ~]#
+sqoop list-databases --connect jdbc:mysql://localhost:3306 --username root --password hortonworks1
+
+***   list-tables
+
+[root@sandbox-hdp ~]#
+sqoop list-tables --connect jdbc:mysql://localhost:3306/hive --username root --password hortonworks1
+
+***   Single Mapper Import
+--------------------
+ Step -1 :
+[root@sandbox-hdp ~]#
+ sqoop import --connect jdbc:mysql://localhost:3306/hive --username root --password hortonworks1 --table TBLS --target-dir'/tmp/sqoophivetbls/' -m 1
+
+Step-2 (Checking):
+
+[root@sandbox-hdp ~]#
+hdfs dfs -ls /tmp
+ 
+
+ 
+Found 6 items
+drwxrwxr-x   - druid hadoop          0 2018-11-29 19:01 /tmp/druid-indexing
+drwxr-xr-x   - hdfs  hdfs            0 2018-11-29 17:25 /tmp/entity-file-history
+drwx-wx-wx   - hive  hdfs            0 2018-11-29 17:58 /tmp/hive
+drwxr-xr-x   - hive  hdfs            0 2022-12-25 11:05 /tmp/hivedb
+drwxr-xr-x   - root  hdfs            0 2023-01-27 11:48 /tmp/sqoophivetbls
+drwxr-xr-x   - root  hdfs            0 2023-01-27 12:08 /tmp/sqoophivetblss
+
+
+[root@sandbox-hdp ~]# hdfs dfs -ls /tmp/sqoophivetbls/
+
+Found 2 items
+
+-rw-r--r--   1 root hdfs          0 2023-01-27 11:48 /tmp/sqoophivetbls/_SUCCESS
+-rw-r--r--   1 root hdfs      28908 2023-01-27 11:48 /tmp/sqoophivetbls/part-m-00000
+
+
+[root@sandbox-hdp ~]# hdfs dfs -cat /tmp/sqoophivetbls/part-m-00000
+
+Multi-Mapper Import
+-------------------
+sqoop import --connect jdbc:mysql://localhost:3306/hive --username root --password
+hortonworks1 --table TBLS --target-dir '/tmp/sqoophivetblsmultimap/' -m 5
+
+
+Follow the Above steps to see the results
+
+
+
+***   Hive import
+------------
+ 
+[hive@@sandbox-hdp root]$  sudo su hive
+
+sqoop import --connect jdbc:mysql://localhost:3306/hive --username root --password
+hortonworks1 --table TBLS --target-dir '/tmp/sqoophivetblsHIVENEW/' -m 5 --hive-import -m 5;
+
+
+Go to hive and check table structure and content
+
+
+
+[hive@@sandbox-hdp root]$ hive
+
+show tables;
+
+select * from tbls;
+
+
+***   Sqoop Export
+
+  ------------
+
+ mysql -u root -p
+
+ 
+ use hive;
+
+mysql> create table company
+ 
+mysql> (
+
+mysql>id int,
+
+mysql> name varchar(20),
+ 
+mysql> location varchar(20)
+
+mysql>  );
+
+mysql>insert into company values(1, 'ineuron','Bangalore');
+
+mysql>insert into company values(2, 'eduvista','Walnut');
+
+mysql>insert into company values(3, 'eduvista','Bangalore');
+
+
+mysql> select * from company;
+
+[hive@sandbox-hdp root]$ sqoop import --connect jdbc:mysql://localhost:3306/hive --username root --password hortonworks1 --table company --target-dir '/tmp/company/' --split-by 'id' -m 3
+
+we will be going into the sql server and deleting the company data 
+
+
+mysql> use hive
+
+
+mysql> show tables;
+
+
+mysql> delete from company;
+Query OK, 3 rows affected (0.00 sec)
+
+mysql> select * from company;
+Empty set (0.00 sec)
+
+mysql> commit;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> select * from company;
+Empty set (0.00 sec)
+
+
+
+
+we can  use  this to kill the job
+
+[hive@sandbox-hdp root]$yarn application -kill application_id
+
+
+
+***  To see whether it is exported or not 
+
+[hive@sandbox-hdp root]$ mysql -u root -p;
+
+mysql> use hive;
+
+
+mysql> select * from company;
+
++------+----------+-----------+
+| id   | name     | location  |
++------+----------+-----------+
+|    2 | eduvista | Walnut    |
+|    3 | eduvista | Bangalore |
+|    1 | ineuron  | Bangalore |
++------+----------+-----------+
+
+[root@sandbox-hdp ~]# sudo su hive
+
+[hive@sandbox-hdp root]$ mysql -u root -p
+
+
+[hive@sandbox-hdp root]$ hdfs dfs -cat /tmp/company/*
+
+1,ineuron,Bangalore
+2,eduvista,Walnut
+3,eduvista,Bangalore
+
+
+
+***  Incremental Mode 
+
+
+[root@sandbox-hdp ~]# sudo su hive
+
+[hive@sandbox-hdp root]$ mysql -u root -p
+
+
+mysql> show databases;
+
+mysql> use hive;
+
+mysql> CREATE TABLE test_new (
+    -> emp_id int,
+    -> name varchar(100),
+    -> salary int,
+    -> update_time timestamp,
+    -> PRIMARY KEY (emp_id) );
+
+
+mysql> INSERT INTO test_new values (1,"ABC",100,'2018-01-20 00:00:00');        
+
+mysql> INSERT INTO test_new values (2,"ABC",200,'2018-01-20 00:00:00');
+
+
+
+mysql> INSERT INTO test_new values (3,"ABC",300,'2018-01-20 00:00:00');
+
+
+mysql> INSERT INTO test_new values (4,"ABC",400,'2018-01-20 00:00:00');
+
+
+mysql> select * from test_new;
+
++--------+------+--------+---------------------+
+| emp_id | name | salary | update_time         |
++--------+------+--------+---------------------+
+|      1 | ABC  |    100 | 2018-01-20 00:00:00 |
+|      2 | ABC  |    200 | 2018-01-20 00:00:00 |
+|      3 | ABC  |    300 | 2018-01-20 00:00:00 |
+|      4 | ABC  |    400 | 2018-01-20 00:00:00 |
++--------+------+--------+---------------------+
+4 rows in set (0.00 sec)
+
+***   Run Normal sqoop import 
+
+================================
+
+[hive@sandbox-hdp root]$  sqoop import --connect jdbc:mysql://localhost:3306/hive --username 'root' --password hortonworks1 --table 'test_new' --target-dir '/tmp/test_new/'
+
+# Checking the data that it has 4 records or not 
+
+===================================================
+
+
+[hive@sandbox-hdp root]$ hdfs dfs -cat /tmp/test_new/*
+
+output:
+
+1,ABC,100,2018-01-20 00:00:00.0
+2,ABC,200,2018-01-20 00:00:00.0
+3,ABC,300,2018-01-20 00:00:00.0
+4,ABC,400,2018-01-20 00:00:00.0
+
+
+*** Run Incremental import Append mode 
+(INSERT INTO test_new values (5,"ABC",500,'2018-01-20 00:00:00');
+==========================================
+
+
+[hive@sandbox-hdp root]$ mysql -u root -p
+
+mysql> use hive;
+
+
+mysql> INSERT INTO test_new values (5,"ABC",500,'2018-01-20 00:00:00');
+
+
+
+mysql> select * from test_new;
+
++--------+------+--------+---------------------+
+| emp_id | name | salary | update_time         |
++--------+------+--------+---------------------+
+|      1 | ABC  |    100 | 2018-01-20 00:00:00 |
+|      2 | ABC  |    200 | 2018-01-20 00:00:00 |
+|      3 | ABC  |    300 | 2018-01-20 00:00:00 |
+|      4 | ABC  |    400 | 2018-01-20 00:00:00 |
+|      5 | ABC  |    500 | 2018-01-20 00:00:00 |
++--------+------+--------+---------------------+
+5 rows in set (0.00 sec)
+
+#TO SEE THE UPDATED OR DATA WHICH IS IN THE SQL WE NEED TO IMPORT DATA SO THAT THE DATA CAN BE IMPORTED INTO THE HDFS 
+
+[hive@sandbox-hdp root]$  sqoop import --connect jdbc:mysql://localhost:3306/hive --incremental append --check-column emp_id --last-value 4  --username root --password hortonworks1 --table test_new --target-dir '/tmp/test_new/'
+
+
+[hive@sandbox-hdp root]$ hdfs dfs -cat /tmp/test_new/*
+
+output:
+
+1,ABC,100,2018-01-20 00:00:00.0
+2,ABC,200,2018-01-20 00:00:00.0
+3,ABC,300,2018-01-20 00:00:00.0
+4,ABC,400,2018-01-20 00:00:00.0
+5,ABC,500,2018-01-20 00:00:00.0
+
+
+
+[hive@sandbox-hdp root]$ mysql -u root -p
+
+
+mysql> use hive;
+
+mysql> INSERT INTO test_new values(6,'ABC',600,'2018-01-22 00:00:00');
+
+mysql> select * from test_new;
+
++--------+------+--------+---------------------+
+| emp_id | name | salary | update_time         |
++--------+------+--------+---------------------+
+|      1 | ABC  |    100 | 2018-01-20 00:00:00 |
+|      2 | ABC  |    200 | 2018-01-20 00:00:00 |
+|      3 | ABC  |    300 | 2018-01-20 00:00:00 |
+|      4 | ABC  |    400 | 2018-01-20 00:00:00 |
+|      5 | ABC  |    500 | 2018-01-20 00:00:00 |
+|      6 | ABC  |    600 | 2018-01-22 00:00:00 |
++--------+------+--------+---------------------+
+
+
+
+#  WE HAVE UPDATED THE EMP_ID WITH NAME FROM ABC TO XYZ AND ALSO UPDATED UPDATE_TIME
+
+
+mysql> update test_new set name='XYZ',update_time='2018-01-22 00:00:00' where emp_id=4;
+
+
+mysql> select * from test_new;
++--------+------+--------+---------------------+
+| emp_id | name | salary | update_time         |
++--------+------+--------+---------------------+
+|      1 | ABC  |    100 | 2018-01-20 00:00:00 |
+|      2 | ABC  |    200 | 2018-01-20 00:00:00 |
+|      3 | ABC  |    300 | 2018-01-20 00:00:00 |
+|      4 | XYZ  |    400 | 2018-01-22 00:00:00 |
+|      5 | ABC  |    500 | 2018-01-20 00:00:00 |
+|      6 | ABC  |    600 | 2018-01-22 00:00:00 |
++--------+------+--------+---------------------+
+
+
+Run Incremental Import LastModified Mode To identify the
+Updates
+
+==========================================
+
+
+[hive@sandbox-hdp root]$ sqoop import --connect jdbc:mysql://localhost:3306/hive --incremental lastmodified --check-column update_time --last-value 2018-01-21 --merge-key emp_id --username root --password hortonworks1 --table test_new --target-dir '/tmp/test_new/'
+
+[hive@sandbox-hdp root]$ hdfs dfs -cat /tmp/test_new/*                          
+
+
+1,ABC,100,2018-01-20 00:00:00.0
+2,ABC,200,2018-01-20 00:00:00.0
+3,ABC,300,2018-01-20 00:00:00.0
+4,XYZ,400,2018-01-22 00:00:00.0
+5,ABC,500,2018-01-20 00:00:00.0
+6,ABC,600,2018-01-22 00:00:00.0
+
+
+******   Change file format of the target HDFS
+
+
+[hive@sandbox-hdp root]$ sqoop import --connect jdbc:mysql://localhost:3306/hive --username 'root' --password hortonworks1 --table 'test_new'; --as-avrodatafile --target-dir '/tmp/test_new_avro/'
+
+
+
